@@ -1,35 +1,61 @@
-cmake_minimum_required(VERSION 3.8)
-project(drone_kontrol)
+cmake_minimum_required(VERSION 3.10)
+project(kodelig_otonom_sistem)
 
+# C++17 Standardı
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# ROS 2 ve Diğer Kütüphaneleri Bul
-find_package(ament_cmake REQUIRED)
+# ---------------------------------------------------------
+# 1. DIŞ BAĞIMLILIKLAR (ROS 2 & OpenCV)
+# ---------------------------------------------------------
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(OpenCV REQUIRED)
-find_package(MAVSDK REQUIRED)
 
-# Tüm cpp dosyalarını derle
-add_executable(drone_kontrol
-  main.cpp
-  mission_1.cpp
-  vision_module.cpp
+# ---------------------------------------------------------
+# 2. MAVLINK BAŞLIK DOSYALARI (MAVSDK yerine)
+# ---------------------------------------------------------
+# Not: MAVLink kütüphanesi derleme gerektirmez, sadece include edilir.
+# Sisteminize göre bu yolu güncelleyin. Varsayılan olarak yaygın kullanılan yollar eklenmiştir.
+set(MAVLINK_INCLUDE_DIR "/usr/local/include/mavlink/v2.0" CACHE PATH "Path to MAVLink headers")
+
+# ---------------------------------------------------------
+# 3. ÇALIŞTIRILABİLİR DOSYA VE KAYNAKLAR
+# ---------------------------------------------------------
+add_executable(otonom_node
+    main.cpp
+    mission_1.cpp
+    vision_module.cpp
 )
 
-# Kendi başlık dosyalarının (c_library_v2 vs) yolunu göster
-target_include_directories(drone_kontrol PRIVATE ./c_library_v2/common)
-
-# ROS 2 Kütüphanelerini Bağla
-ament_target_dependencies(drone_kontrol
-  rclcpp
-  sensor_msgs
-  cv_bridge
+# ---------------------------------------------------------
+# 4. INCLUDE DİZİNLERİ
+# ---------------------------------------------------------
+target_include_directories(otonom_node PUBLIC
+    ${OpenCV_INCLUDE_DIRS}
+    ${MAVLINK_INCLUDE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# MAVSDK'yı Bütün Olarak (Tek Parça) Bağla
-target_link_libraries(drone_kontrol
-  MAVSDK::mavsdk
-  ${OpenCV_LIBS}
+# ---------------------------------------------------------
+# 5. KÜTÜPHANELERİ BAĞLA (Linking)
+# ---------------------------------------------------------
+# ROS 2 bağımlılıkları
+ament_target_dependencies(otonom_node
+    rclcpp
+    sensor_msgs
+    cv_bridge
 )
+
+# OpenCV ve Sistem kütüphaneleri (MAVSDK artık burada yok)
+target_link_libraries(otonom_node
+    ${OpenCV_LIBS}
+    pthread
+)
+
+# ---------------------------------------------------------
+# 6. YÜKLEME VE PAKETLEME
+# ---------------------------------------------------------
+install(TARGETS otonom_node DESTINATION lib/${PROJECT_NAME})
+ament_package()
